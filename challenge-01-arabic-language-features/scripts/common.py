@@ -80,7 +80,7 @@ def load_model_and_sae(cfg: dict):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = HookedTransformer.from_pretrained(cfg["model_name"], device=device)
-    sae, _, _ = SAE.from_pretrained(
+    sae = SAE.from_pretrained(
         release=sae_cfg["release"], sae_id=sae_cfg["sae_id"], device=device
     )
     return model, sae

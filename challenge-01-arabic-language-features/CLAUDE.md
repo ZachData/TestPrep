@@ -21,6 +21,13 @@ Read before acting:
 ```bash
 pip install -r requirements.txt
 
+# one command, runs everything up through analysis.py in order:
+./run_all.sh
+```
+
+To run or re-run a single stage instead of the whole pipeline:
+
+```bash
 # canonical run order -- each step's output feeds the next
 python scripts/00_resolve_sae.py --apply     # resolves config.yaml's sae.* fields
 python scripts/01_baseline.py                # go/no-go: is there AR-script signal at all?
@@ -30,8 +37,8 @@ python scripts/03_ablate_measure.py --direction induce
 python scripts/04_matched_control.py --direction suppress
 python scripts/04_matched_control.py --direction induce
 python scripts/04b_specificity_control.py    # needs ablate_suppress.json to exist first
-python scripts/05_heldout.py                 # optional, if time permits
 python scripts/analysis.py                   # recomputes verdicts from results/*.json
+python scripts/05_heldout.py                 # optional, if time permits -- not in run_all.sh
 ```
 
 No lint/typecheck configured in this repo yet. Never install a package

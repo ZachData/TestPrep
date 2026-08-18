@@ -21,7 +21,8 @@ from common import ROOT, load_config
 def find_directory_fn():
     """sae_lens has relocated this helper across versions. Try known paths."""
     candidates = [
-        ("sae_lens.toolkit.pretrained_saes_directory", "get_pretrained_saes_directory"),
+        ("sae_lens.loading.pretrained_saes_directory", "get_pretrained_saes_directory"),  # v6+
+        ("sae_lens.toolkit.pretrained_saes_directory", "get_pretrained_saes_directory"),  # pre-v6
         ("sae_lens", "get_pretrained_saes_directory"),
         ("sae_lens.pretrained_saes_directory", "get_pretrained_saes_directory"),
     ]
