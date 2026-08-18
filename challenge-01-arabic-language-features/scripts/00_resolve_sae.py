@@ -103,13 +103,19 @@ def main():
 
     print(f"\nFound {len(matches)} candidate release(s):\n")
     residual_candidates = []
+    canonical_releases = []  # release_id ends in "-res-sm": hand-curated, not a sweep
     for release_id, model, sae_map in matches:
-        print(f"  release: {release_id}  (model={model})")
+        print(f"  release: {release_id}  (model={model}, {len(sae_map)} sae_ids)")
         for sae_id in list(sae_map.keys())[:20]:
             tag = " <- residual stream" if "resid" in sae_id else ""
             print(f"      sae_id: {sae_id}{tag}")
+        if len(sae_map) > 20:
+            print(f"      ... ({len(sae_map) - 20} more)")
+        for sae_id in sae_map:
             if "resid" in sae_id:
                 residual_candidates.append((release_id, sae_id))
+        if release_id.endswith("-res-sm"):
+            canonical_releases.append((release_id, sae_map))
 
     if not args.apply:
         print(
@@ -120,27 +126,45 @@ def main():
         )
         return
 
-    if len(residual_candidates) != 1:
-        print(
-            f"\n{len(residual_candidates)} residual-stream candidates found -- "
-            "refusing to auto-pick one under --apply since the choice (which "
-            "layer) materially changes the experiment. Edit config.yaml by hand, "
-            "picking a middle layer, then note the choice in PROJECT.md's "
-            "Decisions table.",
-            file=sys.stderr,
-        )
-        sys.exit(1)
+    # Prefer the one hand-curated "-res-sm" release over sweep/trainer-variant
+    # noise (sae_bench_*_sweep_* releases repeat the same layer dozens of
+    # times under different __trainer_N variants -- not a real choice).
+    if len(canonical_releases) == 1:
+        release_id, sae_map = canonical_releases[0]
+        layered = []
+        for sae_id in sae_map:
+            if sae_id.endswith("hook_resid_post") and "blocks." in sae_id:
+                layered.append((int(sae_id.split(".")[1]), sae_id))
+        if layered:
+            layered.sort()
+            mid_layer, sae_id = layered[len(layered) // 2]
+            cfg_path = ROOT / "config.yaml"
+            cfg = load_config(cfg_path)
+            cfg["sae"]["release"] = release_id
+            cfg["sae"]["sae_id"] = sae_id
+            cfg["sae"]["layer"] = str(mid_layer)
+            with open(cfg_path, "w") as f:
+                yaml.safe_dump(cfg, f, sort_keys=False)
+            print(
+                f"\nExactly one canonical residual release found ({release_id}). "
+                f"Auto-picked the middle layer ({mid_layer} of "
+                f"{[l for l, _ in layered]}) to avoid an arbitrary first/last-layer "
+                f"choice. Wrote release={release_id}, sae_id={sae_id}, "
+                f"layer={mid_layer} to config.yaml.\n"
+                "Log this pick in PROJECT.md's Decisions table."
+            )
+            return
 
-    release_id, sae_id = residual_candidates[0]
-    layer = sae_id.split(".")[1] if "blocks." in sae_id else "unknown"
-    cfg_path = ROOT / "config.yaml"
-    cfg = load_config(cfg_path)
-    cfg["sae"]["release"] = release_id
-    cfg["sae"]["sae_id"] = sae_id
-    cfg["sae"]["layer"] = layer
-    with open(cfg_path, "w") as f:
-        yaml.safe_dump(cfg, f, sort_keys=False)
-    print(f"\nWrote release={release_id}, sae_id={sae_id}, layer={layer} to config.yaml")
+    print(
+        f"\n{len(residual_candidates)} residual-stream candidates found across "
+        f"{len(matches)} releases, and no single unambiguous canonical "
+        "'-res-sm' release to auto-pick a layer from -- refusing to guess. "
+        "Edit config.yaml by hand (sae.release / sae.sae_id / sae.layer), "
+        "picking a middle layer from a coherent release, then note the "
+        "choice in PROJECT.md's Decisions table.",
+        file=sys.stderr,
+    )
+    sys.exit(1)
 
 
 if __name__ == "__main__":
