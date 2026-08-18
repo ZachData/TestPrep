@@ -1,0 +1,29 @@
+# Filled in step by step as the pipeline runs. Values marked RESOLVE_ME are not
+# guesses -- 00_resolve_sae.py must populate them before anything downstream runs.
+model_name: "pythia-70m-deduped"
+
+sae:
+  # sae_lens release id and sae_id for a residual-stream SAE on pythia-70m-deduped.
+  # 00_resolve_sae.py queries sae_lens.pretrained_saes_directory at runtime and
+  # writes the resolved values here -- do not hand-fill these before running it.
+  release: "RESOLVE_ME"
+  sae_id: "RESOLVE_ME"
+  layer: "RESOLVE_ME"
+
+experiment:
+  top_k: 26          # matches ESR's own set size; override with --k for dose-response
+  steering_scale: 2.0  # induce direction: clamp candidate latents to steering_scale * mean magnitude
+  n_control_draws: 20
+  seed: 0
+  alpha: 0.10
+  max_new_tokens: 40
+  # regex Unicode block for Arabic script (includes Arabic presentation forms)
+  arabic_regex: "[؀-ۿݐ-ݿﭐ-﷿ﹰ-﻿]"
+  # French-specific accented Latin characters, used only by 04b's specificity check
+  french_accent_regex: "[àâäçéèêëîïôöùûüÿœ]"
+
+paths:
+  train_pairs: "data/pairs_train.jsonl"
+  heldout_pairs: "data/pairs_heldout.jsonl"
+  control_lang_pairs: "data/pairs_control_lang.jsonl"
+  results_dir: "results"
